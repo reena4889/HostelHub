@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelHub — Hostel Management System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .sidebar-transition{transition:width .25s ease,transform .25s ease}
+  .page{display:none}.page.active{display:block}
+  .modal{display:none}.modal.show{display:flex}
+  .toast{transform:translateY(120px);opacity:0;transition:.25s}.toast.show{transform:translateY(0);opacity:1}
+  .nav-item.active{background:#eef2ff;color:#4f46e5}
+  .dark .nav-item.active{background:#312e81;color:#fff}
+  .dark .surface{background:#111827;color:#e5e7eb}
+  .dark .page-bg{background:#030712}
+  .dark .muted{color:#9ca3af}
+  .dark input,.dark select,.dark textarea{background:#1f2937;color:#e5e7eb;border-color:#374151}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800" id="appBody">
+
+<!-- LOGIN -->
+<div id="loginScreen" class="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-800 to-purple-800 flex items-center justify-center p-6">
+  <div class="w-full max-w-5xl grid lg:grid-cols-2 bg-white rounded-3xl overflow-hidden shadow-2xl">
+    <div class="hidden lg:flex bg-gradient-to-br from-indigo-700 to-purple-700 text-white p-12 flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-3 text-2xl font-bold"><span class="bg-white/15 p-2 rounded-xl">🏠</span> HostelHub</div>
+        <h1 class="text-5xl font-bold leading-tight mt-16">Smart Hostel<br>Management<br>Made Simple.</h1>
+        <p class="text-indigo-100 mt-6 text-lg">Manage students, rooms, fees, complaints, attendance and hostel operations from one powerful platform.</p>
+      </div>
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div><div class="text-2xl font-bold">5K+</div><div class="text-xs text-indigo-200">Students</div></div>
+        <div><div class="text-2xl font-bold">20+</div><div class="text-xs text-indigo-200">Hostels</div></div>
+        <div><div class="text-2xl font-bold">2K+</div><div class="text-xs text-indigo-200">Rooms</div></div>
+      </div>
+    </div>
+    <div class="p-8 md:p-12">
+      <div class="lg:hidden text-2xl font-bold text-indigo-700 mb-10">🏠 HostelHub</div>
+      <h2 class="text-3xl font-bold">Welcome back 👋</h2>
+      <p class="text-slate-500 mt-2">Sign in to your hostel management account.</p>
+      <form id="loginForm" class="mt-8 space-y-5">
+        <div><label class="text-sm font-semibold">Email / Student ID</label><input id="loginId" required value="admin@hostelhub.com" class="mt-2 w-full border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your ID"></div>
+        <div><label class="text-sm font-semibold">Password</label><input id="loginPass" type="password" required value="admin123" class="mt-2 w-full border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter password"></div>
+        <div><label class="text-sm font-semibold">Role</label><select id="loginRole" class="mt-2 w-full border rounded-xl px-4 py-3"><option value="admin">Admin</option><option value="warden">Warden</option><option value="student">Student</option></select></div>
+        <div class="flex items-center justify-between text-sm"><label><input type="checkbox" checked> Remember me</label><button type="button" class="text-indigo-600 font-semibold">Forgot password?</button></div>
+        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition">Sign In</button>
+      </form>
+      <div class="mt-7 bg-indigo-50 rounded-xl p-4 text-sm text-indigo-800"><b>Demo:</b> admin@hostelhub.com / admin123. Select any role to preview its dashboard.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden min-h-screen">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r sidebar-transition flex flex-col">
+    <div class="h-16 flex items-center gap-3 px-5 border-b"><div class="bg-indigo-600 text-white p-2 rounded-xl">🏠</div><span class="font-bold text-xl">HostelHub</span></div>
+    <div id="sideRole" class="px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400">Admin Portal</div>
+    <nav id="nav" class="px-3 space-y-1 overflow-y-auto pb-4"></nav>
+    <div class="mt-auto p-4 border-t"><button onclick="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-600"><i data-lucide="log-out"></i> Logout</button></div>
+  </aside>
+
+  <main id="main" class="ml-64 min-h-screen page-bg sidebar-transition">
+    <header class="sticky top-0 z-30 h-16 bg-white/90 backdrop-blur border-b flex items-center justify-between px-5">
+      <div class="flex items-center gap-3"><button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100"><i data-lucide="menu"></i></button><div class="relative hidden md:block"><i data-lucide="search" class="absolute left-3 top-2.5 w-4"></i><input id="globalSearch" oninput="globalSearch()" placeholder="Search students, rooms..." class="pl-9 pr-4 py-2 bg-slate-100 rounded-xl outline-none w-72"></div></div>
+      <div class="flex items-center gap-3"><button onclick="toggleDark()" class="p-2 rounded-lg hover:bg-slate-100"><i data-lucide="moon"></i></button><button onclick="showNotifications()" class="relative p-2 rounded-lg hover:bg-slate-100"><i data-lucide="bell"></i><span class="absolute top-1 right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full">4</span></button><div class="flex items-center gap-2 border-l pl-3"><div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold" id="avatar">AD</div><div class="hidden sm:block"><div id="userName" class="text-sm font-semibold">Admin User</div><div id="userRole" class="text-xs text-slate-500">Administrator</div></div></div></div>
+    </header>
+
+    <div class="p-5 md:p-7">
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="page active">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"><div><h1 class="text-3xl font-bold" id="welcome">Good morning, Admin 👋</h1><p class="text-slate-500 mt-1">Here's what's happening across your hostel today.</p></div><button onclick="openModal('announcementModal')" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2"><i data-lucide="megaphone" class="w-4"></i> New Announcement</button></div>
+        <div id="stats" class="grid grid-cols-2 xl:grid-cols-4 gap-4"></div>
+        <div class="grid xl:grid-cols-3 gap-5 mt-5">
+          <div class="xl:col-span-2 surface bg-white rounded-2xl border p-5"><div class="flex justify-between"><h3 class="font-bold">Hostel Occupancy</h3><span class="text-sm text-slate-400">This month</span></div><canvas id="occupancyChart" height="115"></canvas></div>
+          <div class="surface bg-white rounded-2xl border p-5"><h3 class="font-bold">Complaint Breakdown</h3><canvas id="complaintChart" height="220"></canvas></div>
+        </div>
+        <div class="grid xl:grid-cols-3 gap-5 mt-5">
+          <div class="xl:col-span-2 surface bg-white rounded-2xl border p-5"><div class="flex justify-between items-center"><h3 class="font-bold">Recent Activities</h3><button class="text-indigo-600 text-sm font-semibold">View all</button></div><div id="activities" class="mt-4 divide-y"></div></div>
+          <div class="surface bg-white rounded-2xl border p-5"><h3 class="font-bold">Today's Mess Menu</h3><div id="todayMenu" class="mt-4 space-y-3"></div></div>
+        </div>
+      </section>
+
+      <!-- STUDENTS -->
+      <section id="students" class="page">
+        <PageHeader title="Student Management" desc="Manage student profiles, hostel assignments and records." button="Add Student" action="openModal('studentModal')" icon="user-plus"></PageHeader>
+        <div class="surface bg-white rounded-2xl border overflow-hidden"><div class="p-4 flex flex-wrap gap-3 border-b"><input id="studentSearch" oninput="renderStudents()" class="border rounded-xl px-4 py-2 flex-1 min-w-48" placeholder="Search by name or ID..."><select id="deptFilter" onchange="renderStudents()" class="border rounded-xl px-4 py-2"><option value="">All Departments</option><option>CSE</option><option>ECE</option><option>EEE</option><option>Mechanical</option></select><select id="hostelFilter" onchange="renderStudents()" class="border rounded-xl px-4 py-2"><option value="">All Hostels</option><option>Hostel A</option><option>Hostel B</option><option>Hostel C</option></select></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500"><tr><th class="p-4 text-left">Student</th><th class="p-4 text-left">ID</th><th class="p-4 text-left">Department</th><th class="p-4 text-left">Hostel / Room</th><th class="p-4 text-left">Status</th><th class="p-4 text-right">Actions</th></tr></thead><tbody id="studentTable"></tbody></table></div></div>
+      </section>
+
+      <!-- HOSTELS -->
+      <section id="hostels" class="page"><PageHeader title="Hostel Management" desc="Monitor hostels, wardens, rooms and occupancy." button="Add Hostel" action="toast('Hostel creation form opened')" icon="building-2"></PageHeader><div id="hostelCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-5"></div></section>
+
+      <!-- ROOMS -->
+      <section id="rooms" class="page"><PageHeader title="Room Management" desc="Track rooms, beds, occupancy and maintenance." button="Add Room" action="toast('Room creation form opened')" icon="bed-double"></PageHeader><div class="surface bg-white rounded-2xl border p-4 mb-5 flex flex-wrap gap-3"><input id="roomSearch" oninput="renderRooms()" class="border rounded-xl px-4 py-2 flex-1 min-w-48" placeholder="Search room number..."><select id="roomStatus" onchange="renderRooms()" class="border rounded-xl px-4 py-2"><option value="">All Status</option><option>Available</option><option>Full</option><option>Maintenance</option></select></div><div id="roomCards" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4"></div></section>
+
+      <!-- ALLOCATION -->
+      <section id="allocation" class="page"><PageHeader title="Room Allocation" desc="Allocate students to available hostel rooms and beds." button="New Allocation" action="openModal('allocationModal')" icon="layout-grid"></PageHeader><div class="surface bg-white rounded-2xl border overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left">Student</th><th class="p-4 text-left">Hostel</th><th class="p-4 text-left">Room</th><th class="p-4 text-left">Bed</th><th class="p-4 text-left">Date</th><th class="p-4 text-left">Status</th></tr></thead><tbody id="allocationTable"></tbody></table></div></div></section>
+
+      <!-- LEAVE -->
+      <section id="leave" class="page"><PageHeader title="Leave Requests" desc="Review and manage student leave applications." button="" action="" icon="calendar-days"></PageHeader><div id="leaveCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div></section>
+
+      <!-- COMPLAINTS -->
+      <section id="complaints" class="page"><PageHeader title="Complaint Management" desc="Track maintenance, food, security and facility complaints." button="New Complaint" action="openModal('complaintModal')" icon="message-square-warning"></PageHeader><div id="complaintCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div></section>
+
+      <!-- VISITORS -->
+      <section id="visitors" class="page"><PageHeader title="Visitor Management" desc="Manage visitor requests, check-ins and check-outs." button="" action="" icon="contact"></PageHeader><div class="surface bg-white rounded-2xl border overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left">Visitor</th><th class="p-4 text-left">Student</th><th class="p-4 text-left">Visit Date</th><th class="p-4 text-left">Purpose</th><th class="p-4 text-left">Status</th><th class="p-4 text-left">Action</th></tr></thead><tbody id="visitorTable"></tbody></table></div></div></section>
+
+      <!-- FEES -->
+      <section id="fees" class="page"><PageHeader title="Hostel Fees" desc="Monitor payments, balances and overdue fees." button="" action="" icon="indian-rupee"></PageHeader><div class="grid md:grid-cols-3 gap-4 mb-5"><StatMini label="Collected This Month" value="₹18.6L" icon="badge-indian-rupee"></StatMini><StatMini label="Pending" value="₹2.45L" icon="clock-3"></StatMini><StatMini label="Overdue" value="₹68K" icon="triangle-alert"></StatMini></div><div class="surface bg-white rounded-2xl border overflow-hidden"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left">Student</th><th class="p-4 text-left">Room</th><th class="p-4 text-left">Total</th><th class="p-4 text-left">Paid</th><th class="p-4 text-left">Balance</th><th class="p-4 text-left">Status</th></tr></thead><tbody id="feeTable"></tbody></table></div></section>
+
+      <!-- ATTENDANCE -->
+      <section id="attendance" class="page"><PageHeader title="Attendance" desc="Record and monitor daily hostel attendance." button="Mark All Present" action="toast('Attendance updated')" icon="clipboard-check"></PageHeader><div class="grid md:grid-cols-4 gap-4 mb-5"><StatMini label="Present" value="1,176" icon="circle-check"></StatMini><StatMini label="Absent" value="32" icon="circle-x"></StatMini><StatMini label="On Leave" value="40" icon="calendar"></StatMini><StatMini label="Rate" value="94.2%" icon="chart-no-axes-combined"></StatMini></div><div class="surface bg-white rounded-2xl border overflow-hidden"><table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="p-4 text-left">Student</th><th class="p-4 text-left">Room</th><th class="p-4 text-left">Date</th><th class="p-4 text-left">Attendance</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></section>
+
+      <!-- MESS -->
+      <section id="mess" class="page"><PageHeader title="Mess Management" desc="Manage weekly menu and collect student feedback." button="Add Menu" action="toast('Menu form opened')" icon="utensils"></PageHeader><div id="menuCards" class="grid md:grid-cols-2 xl:grid-cols-4 gap-4"></div><div class="surface bg-white rounded-2xl border p-5 mt-5"><h3 class="font-bold text-lg">Mess Feedback</h3><div class="mt-4 grid md:grid-cols-3 gap-4"><div class="p-4 bg-slate-50 rounded-xl"><div class="text-sm text-slate-500">Average Rating</div><div class="text-3xl font-bold mt-1">4.3 ★</div></div><div class="p-4 bg-slate-50 rounded-xl"><div class="text-sm text-slate-500">Responses</div><div class="text-3xl font-bold mt-1">842</div></div><div class="p-4 bg-slate-50 rounded-xl"><div class="text-sm text-slate-500">This Week</div><div class="text-3xl font-bold mt-1 text-green-600">+8%</div></div></div></div></section>
+
+      <!-- ANNOUNCEMENTS -->
+      <section id="announcements" class="page"><PageHeader title="Announcements" desc="Keep students and hostel staff informed." button="New Announcement" action="openModal('announcementModal')" icon="megaphone"></PageHeader><div id="announcementCards" class="space-y-4"></div></section>
+
+      <!-- REPORTS -->
+      <section id="reports" class="page"><PageHeader title="Reports & Analytics" desc="Generate operational reports for hostel administration." button="Export CSV" action="exportCSV()" icon="download"></PageHeader><div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4"><div class="surface bg-white border rounded-2xl p-5"><i data-lucide="users" class="text-indigo-600"></i><h3 class="font-bold mt-4">Student Report</h3><p class="text-sm text-slate-500 mt-1">Complete student directory.</p><button onclick="exportCSV()" class="mt-4 text-indigo-600 font-semibold text-sm">Export →</button></div><div class="surface bg-white border rounded-2xl p-5"><i data-lucide="bed-double" class="text-indigo-600"></i><h3 class="font-bold mt-4">Occupancy Report</h3><p class="text-sm text-slate-500 mt-1">Hostel and room utilization.</p><button onclick="toast('Occupancy report generated')" class="mt-4 text-indigo-600 font-semibold text-sm">Generate →</button></div><div class="surface bg-white border rounded-2xl p-5"><i data-lucide="indian-rupee" class="text-indigo-600"></i><h3 class="font-bold mt-4">Fee Report</h3><p class="text-sm text-slate-500 mt-1">Payments and outstanding balances.</p><button onclick="toast('Fee report generated')" class="mt-4 text-indigo-600 font-semibold text-sm">Generate →</button></div><div class="surface bg-white border rounded-2xl p-5"><i data-lucide="message-square-warning" class="text-indigo-600"></i><h3 class="font-bold mt-4">Complaint Report</h3><p class="text-sm text-slate-500 mt-1">Complaint trends and resolution.</p><button onclick="toast('Complaint report generated')" class="mt-4 text-indigo-600 font-semibold text-sm">Generate →</button></div></div></section>
+
+      <!-- EMERGENCY -->
+      <section id="emergency" class="page"><PageHeader title="Emergency Contacts" desc="Quick access to important hostel and emergency services." button="Add Contact" action="toast('Contact form opened')" icon="siren"></PageHeader><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4" id="emergencyCards"></div></section>
+
+      <!-- SETTINGS -->
+      <section id="settings" class="page"><PageHeader title="Settings" desc="Configure your account, notifications and system preferences." button="" action="" icon="settings"></PageHeader><div class="grid lg:grid-cols-3 gap-5"><div class="lg:col-span-2 surface bg-white border rounded-2xl p-6"><h3 class="font-bold text-lg">Account Settings</h3><div class="grid md:grid-cols-2 gap-4 mt-5"><label class="text-sm font-semibold">Full Name<input value="Admin User" class="mt-2 w-full border rounded-xl px-4 py-3"></label><label class="text-sm font-semibold">Email<input value="admin@hostelhub.com" class="mt-2 w-full border rounded-xl px-4 py-3"></label><label class="text-sm font-semibold">Phone<input value="+91 98765 43210" class="mt-2 w-full border rounded-xl px-4 py-3"></label><label class="text-sm font-semibold">Role<input value="Administrator" disabled class="mt-2 w-full border rounded-xl px-4 py-3 bg-slate-50"></label></div><button onclick="toast('Settings saved successfully')" class="mt-5 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-semibold">Save Changes</button></div><div class="surface bg-white border rounded-2xl p-6"><h3 class="font-bold text-lg">Notifications</h3><div class="space-y-5 mt-5"><Toggle text="Leave notifications" checked><Toggle text="Complaint notifications" checked><Toggle text="Fee reminders" checked><Toggle text="New announcements"></div></div></div></section>
+
+      <!-- STUDENT PORTAL -->
+      <section id="studentPortal" class="page">
+        <div class="mb-6"><h1 class="text-3xl font-bold">Welcome back, Priya 👋</h1><p class="text-slate-500 mt-1">Here's your hostel overview.</p></div>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatMini label="My Room" value="A-204 / B2" icon="bed-double"></StatMini><StatMini label="Attendance" value="94.6%" icon="clipboard-check"></StatMini><StatMini label="Fee Balance" value="₹15,000" icon="indian-rupee"></StatMini><StatMini label="Complaints" value="1 Open" icon="message-square-warning"></StatMini>
+        </div>
+        <div class="grid xl:grid-cols-3 gap-5 mt-5">
+          <div class="xl:col-span-2 surface bg-white border rounded-2xl p-6"><h3 class="font-bold text-lg">My Room</h3><div class="grid md:grid-cols-3 gap-4 mt-5"><div class="bg-indigo-50 p-4 rounded-xl"><span class="text-sm text-slate-500">Hostel</span><div class="font-bold mt-1">Hostel A</div></div><div class="bg-indigo-50 p-4 rounded-xl"><span class="text-sm text-slate-500">Room</span><div class="font-bold mt-1">A-204</div></div><div class="bg-indigo-50 p-4 rounded-xl"><span class="text-sm text-slate-500">Bed</span><div class="font-bold mt-1">B2</div></div></div><h4 class="font-semibold mt-6">Roommates</h4><div class="flex gap-3 mt-3"><div class="px-4 py-2 bg-slate-100 rounded-xl">Anjali R</div><div class="px-4 py-2 bg-slate-100 rounded-xl">Divya S</div></div></div>
+          <div class="surface bg-white border rounded-2xl p-6"><h3 class="font-bold">Quick Actions</h3><div class="grid grid-cols-2 gap-3 mt-4"><button onclick="openModal('leaveModal')" class="p-4 bg-indigo-50 text-indigo-700 rounded-xl font-semibold">Apply Leave</button><button onclick="openModal('complaintModal')" class="p-4 bg-amber-50 text-amber-700 rounded-xl font-semibold">Complaint</button><button onclick="toast('Visitor request opened')" class="p-4 bg-green-50 text-green-700 rounded-xl font-semibold">Visitor</button><button onclick="go('fees')" class="p-4 bg-purple-50 text-purple-700 rounded-xl font-semibold">View Fees</button></div></div>
+        </div>
+        <div class="grid xl:grid-cols-2 gap-5 mt-5"><div class="surface bg-white border rounded-2xl p-6"><h3 class="font-bold">Recent Announcements</h3><div id="studentAnnouncements" class="mt-4 space-y-3"></div></div><div class="surface bg-white border rounded-2xl p-6"><h3 class="font-bold">Today's Mess Menu</h3><div id="studentMenu" class="mt-4 space-y-3"></div></div></div>
+      </section>
+
+      <!-- WARDEN PORTAL -->
+      <section id="wardenPortal" class="page"><div class="mb-6"><h1 class="text-3xl font-bold">Warden Dashboard 👋</h1><p class="text-slate-500 mt-1">Hostel A — daily operations overview.</p></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4"><StatMini label="Total Students" value="248" icon="users"></StatMini><StatMini label="Present Today" value="236" icon="circle-check"></StatMini><StatMini label="On Leave" value="8" icon="calendar"></StatMini><StatMini label="Complaints" value="4" icon="message-square-warning"></StatMini></div><div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5"><button onclick="go('attendance')" class="surface bg-white border rounded-2xl p-5 text-left hover:shadow-lg"><i data-lucide="clipboard-check" class="text-indigo-600"></i><b class="block mt-4">Mark Attendance</b><span class="text-sm text-slate-500">Record today's attendance</span></button><button onclick="go('leave')" class="surface bg-white border rounded-2xl p-5 text-left hover:shadow-lg"><i data-lucide="calendar-check" class="text-indigo-600"></i><b class="block mt-4">Approve Leave</b><span class="text-sm text-slate-500">Review pending requests</span></button><button onclick="go('visitors')" class="surface bg-white border rounded-2xl p-5 text-left hover:shadow-lg"><i data-lucide="contact" class="text-indigo-600"></i><b class="block mt-4">Manage Visitors</b><span class="text-sm text-slate-500">Check visitor logs</span></button><button onclick="go('complaints')" class="surface bg-white border rounded-2xl p-5 text-left hover:shadow-lg"><i data-lucide="wrench" class="text-indigo-600"></i><b class="block mt-4">Complaints</b><span class="text-sm text-slate-500">Resolve maintenance issues</span></button></div></section>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="studentModal" class="modal fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"><div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-auto p-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Add Student</h2><button onclick="closeModal('studentModal')">✕</button></div><form onsubmit="addStudent(event)" class="grid md:grid-cols-2 gap-4 mt-5"><input id="newName" required class="border rounded-xl px-4 py-3" placeholder="Full Name"><input id="newId" required class="border rounded-xl px-4 py-3" placeholder="Student ID"><input id="newDept" class="border rounded-xl px-4 py-3" placeholder="Department"><input id="newPhone" class="border rounded-xl px-4 py-3" placeholder="Phone"><select id="newHostel" class="border rounded-xl px-4 py-3"><option>Hostel A</option><option>Hostel B</option><option>Hostel C</option></select><input id="newRoom" class="border rounded-xl px-4 py-3" placeholder="Room Number"><button class="md:col-span-2 bg-indigo-600 text-white rounded-xl py-3 font-bold">Add Student</button></form></div></div>
+
+<div id="allocationModal" class="modal fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"><div class="bg-white rounded-2xl w-full max-w-lg p-6"><div class="flex justify-between"><h2 class="text-xl font-bold">New Room Allocation</h2><button onclick="closeModal('allocationModal')">✕</button></div><form onsubmit="newAllocation(event)" class="space-y-4 mt-5"><select id="allocStudent" class="w-full border rounded-xl px-4 py-3"></select><select id="allocRoom" class="w-full border rounded-xl px-4 py-3"><option>A-206</option><option>B-108</option><option>C-312</option></select><select id="allocBed" class="w-full border rounded-xl px-4 py-3"><option>B1</option><option>B2</option><option>B3</option><option>B4</option></select><button class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold">Confirm Allocation</button></form></div></div>
+
+<div id="leaveModal" class="modal fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"><div class="bg-white rounded-2xl w-full max-w-lg p-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Apply for Leave</h2><button onclick="closeModal('leaveModal')">✕</button></div><form onsubmit="submitLeave(event)" class="space-y-4 mt-5"><select class="w-full border rounded-xl px-4 py-3"><option>Home Visit</option><option>Medical Leave</option><option>Personal Leave</option><option>Emergency Leave</option></select><div class="grid grid-cols-2 gap-3"><input type="date" required class="border rounded-xl px-4 py-3"><input type="date" required class="border rounded-xl px-4 py-3"></div><textarea required class="w-full border rounded-xl px-4 py-3" placeholder="Reason"></textarea><button class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold">Submit Request</button></form></div></div>
+
+<div id="complaintModal" class="modal fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"><div class="bg-white rounded-2xl w-full max-w-lg p-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Submit Complaint</h2><button onclick="closeModal('complaintModal')">✕</button></div><form onsubmit="submitComplaint(event)" class="space-y-4 mt-5"><select class="w-full border rounded-xl px-4 py-3"><option>Electrical</option><option>Plumbing</option><option>Cleaning</option><option>Wi-Fi</option><option>Furniture</option><option>Food/Mess</option><option>Security</option></select><select class="w-full border rounded-xl px-4 py-3"><option>Low</option><option>Medium</option><option>High</option><option>Emergency</option></select><textarea required class="w-full border rounded-xl px-4 py-3" placeholder="Describe the issue"></textarea><button class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold">Submit Complaint</button></form></div></div>
+
+<div id="announcementModal" class="modal fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"><div class="bg-white rounded-2xl w-full max-w-lg p-6"><div class="flex justify-between"><h2 class="text-xl font-bold">New Announcement</h2><button onclick="closeModal('announcementModal')">✕</button></div><form onsubmit="addAnnouncement(event)" class="space-y-4 mt-5"><input id="annTitle" required class="w-full border rounded-xl px-4 py-3" placeholder="Announcement title"><textarea id="annDesc" required class="w-full border rounded-xl px-4 py-3" placeholder="Description"></textarea><select class="w-full border rounded-xl px-4 py-3"><option>All Students</option><option>Hostel A</option><option>Hostel B</option></select><button class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold">Publish Announcement</button></form></div></div>
+
+<div id="toast" class="toast fixed bottom-5 right-5 z-[60] bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold">Success</div>
+
+<script>
+const students=[
+{name:"Priya Sharma",id:"STU1001",dept:"CSE",hostel:"Hostel A",room:"A-204",status:"Active"},
+{name:"Rahul Kumar",id:"STU1002",dept:"ECE",hostel:"Hostel B",room:"B-108",status:"Active"},
+{name:"Anjali R",id:"STU1003",dept:"CSE",hostel:"Hostel A",room:"A-204",status:"Active"},
+{name:"Karthik M",id:"STU1004",dept:"EEE",hostel:"Hostel C",room:"C-312",status:"Active"},
+{name:"Divya S",id:"STU1005",dept:"Mechanical",hostel:"Hostel A",room:"A-204",status:"Active"},
+{name:"Vignesh R",id:"STU1006",dept:"CSE",hostel:"Hostel B",room:"B-201",status:"Active"},
+{name:"Harini P",id:"STU1007",dept:"ECE",hostel:"Hostel C",room:"C-110",status:"Active"},
+{name:"Arun Kumar",id:"STU1008",dept:"CSE",hostel:"Hostel A",room:"A-102",status:"Active"}
+];
+let allocations=[
+["Priya Sharma","Hostel A","A-204","B2","07 Oct 2026","Active"],
+["Rahul Kumar","Hostel B","B-108","B1","06 Oct 2026","Active"],
+["Karthik M","Hostel C","C-312","B3","04 Oct 2026","Active"],
+["Vignesh R","Hostel B","B-201","B2","03 Oct 2026","Active"]
+];
+let leaves=[
+["Priya Sharma","STU1001","Home Visit","10 Oct – 12 Oct","Pending"],
+["Rahul Kumar","STU1002","Medical Leave","08 Oct – 09 Oct","Approved"],
+["Harini P","STU1007","Personal Leave","15 Oct – 17 Oct","Pending"],
+["Arun Kumar","STU1008","Home Visit","11 Oct – 13 Oct","Rejected"]
+];
+let complaints=[
+["CMP-1042","Priya Sharma","Wi-Fi","Internet unavailable in room A-204","High","In Progress"],
+["CMP-1041","Rahul Kumar","Plumbing","Bathroom tap leakage","Medium","Pending"],
+["CMP-1040","Divya S","Cleaning","Room cleaning required","Low","Resolved"],
+["CMP-1039","Karthik M","Electrical","Tube light not working","Medium","Assigned"],
+["CMP-1038","Vignesh R","Food/Mess","Dinner quality feedback","Low","Closed"]
+];
+let visitors=[
+["Ramesh Kumar","Priya Sharma","10 Oct 2026","Family Visit","Pending"],
+["Sanjay M","Rahul Kumar","07 Oct 2026","Personal","Checked In"],
+["Meena S","Anjali R","12 Oct 2026","Family Visit","Approved"]
+];
+let fees=[
+["Priya Sharma","A-204","₹50,000","₹35,000","₹15,000","Pending"],
+["Rahul Kumar","B-108","₹50,000","₹50,000","₹0","Paid"],
+["Anjali R","A-204","₹50,000","₹42,000","₹8,000","Pending"],
+["Karthik M","C-312","₹48,000","₹30,000","₹18,000","Overdue"]
+];
+let announcements=[
+["Hostel Inspection Scheduled","Monthly hostel inspection will be conducted this Friday at 10:00 AM.","07 Oct 2026","High"],
+["Mess Timing Updated","Dinner will be served from 7:30 PM to 9:00 PM from tomorrow.","06 Oct 2026","Normal"],
+["Water Maintenance","Water supply may be interrupted from 10 AM to 12 PM on Saturday.","05 Oct 2026","Normal"]
+];
+
+function PageHeader({title,desc,button,action,icon}){return `<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6"><div><h1 class="text-3xl font-bold">${title}</h1><p class="text-slate-500 mt-1">${desc}</p></div>${button?`<button onclick="${action}" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2"><i data-lucide="${icon}" class="w-4"></i>${button}</button>`:""}</div>`}
+function StatMini({label,value,icon}){return `<div class="surface bg-white border rounded-2xl p-5"><div class="flex items-center justify-between"><div class="text-sm text-slate-500">${label}</div><i data-lucide="${icon}" class="w-5 text-indigo-600"></i></div><div class="text-2xl font-bold mt-2">${value}</div></div>`}
+function Toggle({text,checked=false}){return `<label class="flex items-center justify-between text-sm"><span>${text}</span><input type="checkbox" ${checked?"checked":""} class="w-5 h-5 accent-indigo-600"></label>`}
+window.PageHeader=PageHeader;window.StatMini=StatMini;window.Toggle=Toggle;
+
+const menus=[
+["Breakfast","Idli • Sambar • Chutney • Tea"],["Lunch","Rice • Sambar • Rasam • Veg Curry • Curd"],["Snacks","Tea • Biscuit • Banana"],["Dinner","Chapati • Paneer Curry • Dal • Rice"]
+];
+const navAdmin=[
+["dashboard","layout-dashboard","Dashboard"],["students","users","Students"],["hostels","building-2","Hostels"],["rooms","bed-double","Rooms"],["allocation","layout-grid","Room Allocation"],["attendance","clipboard-check","Attendance"],["leave","calendar-days","Leave Requests"],["complaints","message-square-warning","Complaints"],["visitors","contact","Visitors"],["fees","indian-rupee","Hostel Fees"],["mess","utensils","Mess Management"],["announcements","megaphone","Announcements"],["reports","bar-chart-3","Reports"],["emergency","siren","Emergency Contacts"],["settings","settings","Settings"]
+];
+const navWarden=[["wardenPortal","layout-dashboard","Dashboard"],["students","users","Students"],["rooms","bed-double","Rooms"],["attendance","clipboard-check","Attendance"],["leave","calendar-days","Leave Requests"],["complaints","message-square-warning","Complaints"],["visitors","contact","Visitors"],["announcements","megaphone","Announcements"],["emergency","siren","Emergency Contacts"]];
+const navStudent=[["studentPortal","layout-dashboard","Dashboard"],["fees","indian-rupee","My Fees"],["leave","calendar-days","My Leave"],["complaints","message-square-warning","My Complaints"],["announcements","megaphone","Announcements"],["mess","utensils","Mess Menu"],["emergency","siren","Emergency Contacts"],["settings","settings","Profile & Settings"]];
+
+let role="admin", charts={};
+
+function login(e){e.preventDefault();role=document.getElementById("loginRole").value;document.getElementById("loginScreen").classList.add("hidden");document.getElementById("app").classList.remove("hidden");setupRole();go(role==="admin"?"dashboard":role==="warden"?"wardenPortal":"studentPortal");}
+document.getElementById("loginForm").addEventListener("submit",login);
+
+function setupRole(){
+ const lists={admin:navAdmin,warden:navWarden,student:navStudent};const list=lists[role];
+ document.getElementById("nav").innerHTML=list.map(x=>`<button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-page="${x[0]}" onclick="go('${x[0]}')"><i data-lucide="${x[1]}" class="w-4"></i>${x[2]}</button>`).join("");
+ document.getElementById("sideRole").textContent=role==="admin"?"Admin Portal":role==="warden"?"Warden Portal":"Student Portal";
+ document.getElementById("userName").textContent=role==="admin"?"Admin User":role==="warden"?"Mr. Arun Kumar":"Priya Sharma";
+ document.getElementById("userRole").textContent=role==="admin"?"Administrator":role==="warden"?"Warden":"Student";
+ document.getElementById("avatar").textContent=role==="admin"?"AD":role==="warden"?"AK":"PS";
+ lucide.createIcons();renderAll();
+}
+function go(page){
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ const el=document.getElementById(page);if(el)el.classList.add("active");
+ document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.page===page));
+ window.scrollTo({top:0,behavior:"smooth"});lucide.createIcons();
+}
+function logout(){document.getElementById("app").classList.add("hidden");document.getElementById("loginScreen").classList.remove("hidden")}
+function toggleSidebar(){let s=document.getElementById("sidebar"),m=document.getElementById("main");if(s.classList.contains("w-64")){s.classList.replace("w-64","w-20");m.classList.replace("ml-64","ml-20");s.querySelectorAll(".nav-item").forEach(x=>x.classList.add("justify-center"));s.querySelectorAll(".nav-item").forEach(x=>{let t=x.textContent.trim();x.title=t})}else{s.classList.replace("w-20","w-64");m.classList.replace("ml-20","ml-64");s.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("justify-center"))}}
+function toggleDark(){document.getElementById("appBody").classList.toggle("dark");document.getElementById("appBody").classList.toggle("bg-slate-50");}
+function openModal(id){if(id==="allocationModal"){document.getElementById("allocStudent").innerHTML=students.map(s=>`<option>${s.name} — ${s.id}</option>`).join("")}document.getElementById(id).classList.add("show")}
+function closeModal(id){document.getElementById(id).classList.remove("show")}
+function toast(msg){let t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function renderAll(){renderStats();renderStudents();renderHostels();renderRooms();renderAllocations();renderLeaves();renderComplaints();renderVisitors();renderFees();renderAttendance();renderMenu();renderAnnouncements();renderEmergency();renderActivities();setTimeout(initCharts,100);lucide.createIcons()}
+function renderStats(){document.getElementById("stats").innerHTML=[["Total Students","1,248","users","from 1,180 last month"],["Total Rooms","420","bed-double","20 new rooms"],["Occupied Beds","1,155","users-round","92.5% occupancy"],["Available Beds","93","door-open","Ready for allocation"],["Pending Complaints","24","message-square-warning","8 high priority"],["Leave Requests","18","calendar-clock","6 need review"],["Pending Fees","₹2.45L","indian-rupee","12 overdue"],["Hostels","6","building-2","All operational"]].map(x=>`<div class="surface bg-white border rounded-2xl p-5"><div class="flex justify-between"><div><div class="text-sm text-slate-500">${x[0]}</div><div class="text-2xl font-bold mt-1">${x[1]}</div></div><div class="p-2.5 rounded-xl bg-indigo-50 text-indigo-600"><i data-lucide="${x[2]}"></i></div></div><div class="text-xs text-slate-400 mt-3">${x[3]}</div></div>`).join("")}
+function renderStudents(){let q=(document.getElementById("studentSearch")?.value||"").toLowerCase(),d=document.getElementById("deptFilter")?.value||"",h=document.getElementById("hostelFilter")?.value||"";let arr=students.filter(s=>(s.name+s.id).toLowerCase().includes(q)&&(!d||s.dept===d)&&(!h||s.hostel===h));document.getElementById("studentTable").innerHTML=arr.map(s=>`<tr class="border-t hover:bg-slate-50"><td class="p-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">${s.name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><b>${s.name}</b></div></td><td class="p-4">${s.id}</td><td class="p-4">${s.dept}</td><td class="p-4">${s.hostel} / ${s.room}</td><td class="p-4"><span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">${s.status}</span></td><td class="p-4 text-right"><button onclick="toast('Viewing ${s.name}')" class="text-indigo-600 font-semibold">View</button></td></tr>`).join("")||`<tr><td colspan="6" class="p-8 text-center text-slate-400">No students found.</td></tr>`}
+function renderHostels(){let data=[["Hostel A","Girls","80","320","285","35","Priya Nair"],["Hostel B","Boys","75","300","276","24","Arun Kumar"],["Hostel C","Girls","70","280","252","28","Meena S"],["Hostel D","Boys","68","272","251","21","Suresh P"],["Hostel E","Girls","65","260","238","22","Kavitha R"],["Hostel F","Boys","62","248","225","23","Ravi K"]];document.getElementById("hostelCards").innerHTML=data.map(x=>{let pct=Math.round(x[4]/x[3]*100);return `<div class="surface bg-white border rounded-2xl p-5"><div class="flex justify-between"><div><h3 class="font-bold text-lg">${x[0]}</h3><span class="text-xs bg-slate-100 px-2 py-1 rounded-full">${x[1]}</span></div><button onclick="toast('${x[0]} details')" class="text-indigo-600"><i data-lucide="ellipsis"></i></button></div><div class="grid grid-cols-2 gap-3 mt-5 text-sm"><div><span class="text-slate-500">Rooms</span><b class="block">${x[2]}</b></div><div><span class="text-slate-500">Beds</span><b class="block">${x[3]}</b></div><div><span class="text-slate-500">Occupied</span><b class="block">${x[4]}</b></div><div><span class="text-slate-500">Available</span><b class="block text-green-600">${x[5]}</b></div></div><div class="mt-5"><div class="flex justify-between text-xs"><span>Occupancy</span><b>${pct}%</b></div><div class="h-2 bg-slate-100 rounded-full mt-2"><div class="h-2 bg-indigo-600 rounded-full" style="width:${pct}%"></div></div></div><div class="mt-5 pt-4 border-t text-sm"><span class="text-slate-500">Warden</span><b class="block">${x[6]}</b></div></div>`}).join("")}
+function renderRooms(){let q=(document.getElementById("roomSearch")?.value||"").toLowerCase(),st=document.getElementById("roomStatus")?.value||"";let rooms=[];for(let i=101;i<=112;i++)rooms.push(["A-"+i,"Hostel A","1","4",i%4===0?4:i%3===0?3:2]);for(let i=201;i<=208;i++)rooms.push(["B-"+i,"Hostel B","2","4",i%4===0?4:i%3===0?3:2]);for(let i=301;i<=308;i++)rooms.push(["C-"+i,"Hostel C","3","3",i%3===0?3:1]);rooms=rooms.filter(r=>r[0].toLowerCase().includes(q));document.getElementById("roomCards").innerHTML=rooms.map(r=>{let status=r[4]>=+r[3]?"Full":r[4]===0?"Available":"Available";if(r[0]==="A-104")status="Maintenance";if(st&&status!==st)return "";return `<div class="surface bg-white border rounded-2xl p-4"><div class="flex justify-between"><h3 class="font-bold">${r[0]}</h3><span class="text-xs font-bold px-2 py-1 rounded-full ${status==="Full"?"bg-red-100 text-red-700":status==="Maintenance"?"bg-amber-100 text-amber-700":"bg-green-100 text-green-700"}">${status}</span></div><p class="text-sm text-slate-500 mt-1">${r[1]} • Floor ${r[2]}</p><div class="mt-4 flex items-end justify-between"><div><div class="text-xs text-slate-500">Occupancy</div><b>${r[4]} / ${r[3]} beds</b></div><i data-lucide="bed-double" class="text-indigo-500"></i></div><button onclick="toast('Room ${r[0]} selected')" class="w-full mt-4 border rounded-xl py-2 text-sm font-semibold">Manage Room</button></div>`}).join("")}
+function renderAllocations(){document.getElementById("allocationTable").innerHTML=allocations.map(r=>`<tr class="border-t"><td class="p-4 font-semibold">${r[0]}</td><td class="p-4">${r[1]}</td><td class="p-4">${r[2]}</td><td class="p-4">${r[3]}</td><td class="p-4">${r[4]}</td><td class="p-4"><span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">${r[5]}</span></td></tr>`).join("")}
+function renderLeaves(){document.getElementById("leaveCards").innerHTML=leaves.map((r,i)=>`<div class="surface bg-white border rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs font-bold px-2.5 py-1 rounded-full ${r[4]==="Pending"?"bg-amber-100 text-amber-700":r[4]==="Approved"?"bg-green-100 text-green-700":"bg-red-100 text-red-700"}">${r[4]}</span><span class="text-xs text-slate-400">${r[1]}</span></div><h3 class="font-bold mt-4">${r[0]}</h3><p class="text-sm text-slate-500 mt-1">${r[2]} • ${r[3]}</p><div class="flex gap-2 mt-5">${r[4]==="Pending"?`<button onclick="leaveAction(${i},'Approved')" class="flex-1 bg-green-600 text-white py-2 rounded-xl text-sm font-semibold">Approve</button><button onclick="leaveAction(${i},'Rejected')" class="flex-1 border border-red-200 text-red-600 py-2 rounded-xl text-sm font-semibold">Reject</button>`:`<button onclick="toast('Request details viewed')" class="w-full border py-2 rounded-xl text-sm font-semibold">View Details</button>`}</div></div>`).join("")}
+function renderComplaints(){document.getElementById("complaintCards").innerHTML=complaints.map((r,i)=>`<div class="surface bg-white border rounded-2xl p-5"><div class="flex justify-between"><span class="font-mono text-xs text-slate-400">${r[0]}</span><span class="text-xs font-bold px-2 py-1 rounded-full ${r[4]==="High"||r[4]==="Emergency"?"bg-red-100 text-red-700":r[4]==="Medium"?"bg-amber-100 text-amber-700":"bg-green-100 text-green-700"}">${r[4]}</span></div><h3 class="font-bold mt-3">${r[2]}</h3><p class="text-sm text-slate-500 mt-1">${r[1]} — ${r[3]}</p><div class="mt-4 flex justify-between items-center"><span class="text-xs font-bold">${r[5]}</span><button onclick="cycleComplaint(${i})" class="text-indigo-600 text-sm font-semibold">Update →</button></div></div>`).join("")}
+function renderVisitors(){document.getElementById("visitorTable").innerHTML=visitors.map((r,i)=>`<tr class="border-t"><td class="p-4 font-semibold">${r[0]}</td><td class="p-4">${r[1]}</td><td class="p-4">${r[2]}</td><td class="p-4">${r[3]}</td><td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${r[4]==="Checked In"?"bg-green-100 text-green-700":r[4]==="Pending"?"bg-amber-100 text-amber-700":"bg-indigo-100 text-indigo-700"}">${r[4]}</span></td><td class="p-4">${r[4]==="Pending"?`<button onclick="visitorAction(${i},'Approved')" class="text-indigo-600 font-semibold">Approve</button>`:`<button onclick="toast('Visitor log opened')" class="text-slate-600 font-semibold">View</button>`}</td></tr>`).join("")}
+function renderFees(){document.getElementById("feeTable").innerHTML=fees.map(r=>`<tr class="border-t"><td class="p-4 font-semibold">${r[0]}</td><td class="p-4">${r[1]}</td><td class="p-4">${r[2]}</td><td class="p-4">${r[3]}</td><td class="p-4 font-bold">${r[4]}</td><td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${r[5]==="Paid"?"bg-green-100 text-green-700":r[5]==="Overdue"?"bg-red-100 text-red-700":"bg-amber-100 text-amber-700"}">${r[5]}</span></td></tr>`).join("")}
+function renderAttendance(){document.getElementById("attendanceTable").innerHTML=students.slice(0,6).map((s,i)=>`<tr class="border-t"><td class="p-4 font-semibold">${s.name}</td><td class="p-4">${s.room}</td><td class="p-4">07 Oct 2026</td><td class="p-4"><button onclick="attendance(this)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-100 text-green-700">Present</button></td></tr>`).join("")}
+function attendance(btn){btn.textContent=btn.textContent==="Present"?"Absent":"Present";btn.className=btn.textContent==="Present"?"px-3 py-1.5 rounded-lg text-xs font-bold bg-green-100 text-green-700":"px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-700"}
+function renderMenu(){document.getElementById("menuCards").innerHTML=menus.map((m,i)=>`<div class="surface bg-white border rounded-2xl p-5"><div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl">🍽️</div><h3 class="font-bold mt-4">${m[0]}</h3><p class="text-sm text-slate-500 mt-2 leading-6">${m[1]}</p></div>`).join("");document.getElementById("todayMenu").innerHTML=menus.map(m=>`<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50"><div class="text-lg">🍽️</div><div><b class="text-sm">${m[0]}</b><div class="text-xs text-slate-500">${m[1]}</div></div></div>`).join("");document.getElementById("studentMenu").innerHTML=document.getElementById("todayMenu").innerHTML}
+function renderAnnouncements(){let html=announcements.map(a=>`<div class="surface bg-white border rounded-2xl p-5"><div class="flex justify-between gap-4"><div><span class="text-xs text-slate-400">${a[2]}</span><h3 class="font-bold mt-1">${a[0]}</h3><p class="text-sm text-slate-500 mt-2">${a[1]}</p></div><span class="h-fit text-xs font-bold px-2 py-1 rounded-full ${a[3]==="High"?"bg-red-100 text-red-700":"bg-indigo-100 text-indigo-700"}">${a[3]}</span></div></div>`).join("");document.getElementById("announcementCards").innerHTML=html;document.getElementById("studentAnnouncements").innerHTML=announcements.slice(0,3).map(a=>`<div class="p-3 rounded-xl bg-slate-50"><b class="text-sm">${a[0]}</b><p class="text-xs text-slate-500 mt-1">${a[1]}</p></div>`).join("")}
+function renderEmergency(){let e=[["Hostel Warden","Arun Kumar","+91 98765 43210","user-round"],["Security","Main Gate","+91 98765 40001","shield-check"],["Ambulance","Emergency","+91 108","ambulance"],["Police","Emergency","+91 100","siren"],["Fire Department","Emergency","+91 101","flame"],["Hospital","City Hospital","+91 104","hospital"],["College Admin","Administration","+91 98765 41000","building"],["Maintenance","24×7 Support","+91 98765 42000","wrench"]];document.getElementById("emergencyCards").innerHTML=e.map(x=>`<div class="surface bg-white border rounded-2xl p-5"><div class="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center"><i data-lucide="${x[3]}"></i></div><h3 class="font-bold mt-4">${x[0]}</h3><p class="text-sm text-slate-500">${x[1]}</p><a href="tel:${x[2]}" class="block mt-4 text-indigo-600 font-bold">${x[2]}</a></div>`).join("")}
+function renderActivities(){let a=[["Rahul Kumar","submitted a complaint","10 minutes ago","message-square-warning"],["Priya Sharma","requested home leave","28 minutes ago","calendar"],["Room B-204","was allocated to a student","1 hour ago","bed-double"],["Fee payment","₹8,500 received from Anjali R","2 hours ago","indian-rupee"],["Warden","posted a new announcement","3 hours ago","megaphone"]];document.getElementById("activities").innerHTML=a.map(x=>`<div class="py-3 flex gap-3"><div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i data-lucide="${x[3]}" class="w-4"></i></div><div><div class="text-sm"><b>${x[0]}</b> ${x[1]}</div><div class="text-xs text-slate-400 mt-1">${x[2]}</div></div></div>`).join("")}
+function initCharts(){if(charts.o)charts.o.destroy();if(charts.c)charts.c.destroy();let o=document.getElementById("occupancyChart"),c=document.getElementById("complaintChart");if(!o||!c)return;charts.o=new Chart(o,{type:"bar",data:{labels:["Hostel A","Hostel B","Hostel C","Hostel D","Hostel E","Hostel F"],datasets:[{label:"Occupied",data:[285,276,252,251,238,225]},{label:"Available",data:[35,24,28,21,22,23]}]},options:{responsive:true,plugins:{legend:{position:"bottom"}},scales:{y:{beginAtZero:true}}}});charts.c=new Chart(c,{type:"doughnut",data:{labels:["Electrical","Plumbing","Cleaning","Wi-Fi","Food","Other"],datasets:[{data:[18,14,12,20,22,14]}]},options:{responsive:true,plugins:{legend:{position:"bottom"}}}})}
+function addStudent(e){e.preventDefault();students.push({name:document.getElementById("newName").value,id:document.getElementById("newId").value,dept:document.getElementById("newDept").value||"CSE",hostel:document.getElementById("newHostel").value,room:document.getElementById("newRoom").value||"Unassigned",status:"Active"});closeModal("studentModal");e.target.reset();renderStudents();toast("Student added successfully")}
+function newAllocation(e){e.preventDefault();let s=document.getElementById("allocStudent").value.split(" — ");let room=document.getElementById("allocRoom").value;let hostel=room.startsWith("A")?"Hostel A":room.startsWith("B")?"Hostel B":"Hostel C";allocations.unshift([s[0],hostel,room,document.getElementById("allocBed").value,"07 Oct 2026","Active"]);closeModal("allocationModal");renderAllocations();toast("Room allocated successfully")}
+function leaveAction(i,status){leaves[i][4]=status;renderLeaves();toast("Leave request "+status.toLowerCase())}
+function cycleComplaint(i){let states=["Pending","Assigned","In Progress","Resolved","Closed"],idx=states.indexOf(complaints[i][5]);complaints[i][5]=states[(idx+1)%states.length];renderComplaints();toast("Complaint status updated")}
+function visitorAction(i,status){visitors[i][4]=status;renderVisitors();toast("Visitor request approved")}
+function submitLeave(e){e.preventDefault();closeModal("leaveModal");toast("Leave request submitted");}
+function submitComplaint(e){e.preventDefault();closeModal("complaintModal");toast("Complaint submitted successfully");}
+function addAnnouncement(e){e.preventDefault();announcements.unshift([document.getElementById("annTitle").value,document.getElementById("annDesc").value,"07 Oct 2026","Normal"]);closeModal("announcementModal");e.target.reset();renderAnnouncements();toast("Announcement published")}
+function showNotifications(){toast("4 notifications: 2 leave requests, 1 complaint, 1 fee reminder")}
+function globalSearch(){let q=document.getElementById("globalSearch").value.toLowerCase();if(q){let s=students.find(x=>(x.name+x.id+x.room).toLowerCase().includes(q));if(s){go("students");document.getElementById("studentSearch").value=q;renderStudents()}}}
+function exportCSV(){let csv="Student ID,Name,Department,Hostel,Room,Status\n"+students.map(s=>`${s.id},${s.name},${s.dept},${s.hostel},${s.room},${s.status}`).join("\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="hostelhub-students.csv";a.click();toast("CSV exported")}
+lucide.createIcons();
+</script>
+</body>
+</html>
